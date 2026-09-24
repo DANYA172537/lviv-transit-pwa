@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0b1220">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Львів Транспорт">
+    <meta name="description" content="Легкий планувальник громадського транспорту Львова">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="/styles.css?v=14">
+    <title>Львів Транспорт — маршрути</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true">ЛТ</div>
+        <div class="brand-copy">
+          <strong>Львів Транспорт</strong>
+          <span>розумний маршрут без зайвих пересадок</span>
+        </div>
+        <button id="install-button" class="icon-button" type="button" title="Встановити на iPhone" aria-label="Встановити на iPhone">↗</button>
+      </header>
+
+      <main>
+        <section class="hero card">
+          <div class="eyebrow">Живий маршрут · Львів</div>
+          <h1>Куди їдемо?</h1>
+          <p class="hero-copy">Порівняй поїздку за розкладом і поточними даними транспорту. Розрахунок працює на сервері, без API-ключів і без ШІ. Або обери початок і пункт клацанням по карті нижче.</p>
+
+          <form id="planner-form" class="planner-form">
+            <div class="place-fields">
+              <label class="place-field">
+                <span class="field-label">Звідки</span>
+                <span class="input-wrap">
+                  <span class="field-icon" aria-hidden="true">●</span>
+                  <input id="from-input" name="from" type="text" value="Вікторія Гарденс" data-place-id="landmark:victoria-gardens" autocomplete="off" placeholder="Введіть місце або зупинку" required>
+                </span>
+                <small class="selected-place" id="from-selected">Вікторія Гарденс</small>
+              </label>
+              <button id="swap-button" class="swap-button" type="button" aria-label="Поміняти місця місцями">⇅</button>
+              <label class="place-field">
+                <span class="field-label">Куди</span>
+                <span class="input-wrap">
+                  <span class="field-icon destination" aria-hidden="true">◆</span>
+                  <input id="to-input" name="to" type="text" value="Санта Барбара" data-place-id="landmark:santa-barbara" autocomplete="off" placeholder="Введіть місце або зупинку" required>
+                </span>
+                <small class="selected-place" id="to-selected">Санта Барбара</small>
+              </label>
+            </div>
+
+            <div id="suggestions" class="suggestions" role="listbox" aria-label="Варіанти місць"></div>
+
+            <div class="trip-options">
+              <label class="option-field">
+                <span class="field-label">Коли</span>
+                <select id="time-mode">
+                  <option value="now">Зараз</option>
+                  <option value="time">Обрати час</option>
+                </select>
+              </label>
+              <label id="time-field" class="option-field is-hidden">
+                <span class="field-label">Час виїзду</span>
+                <input id="time-input" type="time" value="08:00">
+              </label>
+              <label class="option-field">
+                <span class="field-label">Що важливіше</span>
+                <select id="preference">
+                  <option value="fastest">Найшвидше</option>
+                  <option value="simple">Менше пересадок</option>
+                </select>
+              </label>
+              <button id="plan-button" class="primary-button" type="submit">Знайти маршрут <span>→</span></button>
+            </div>
+          </form>
+
+          <div class="quick-places" aria-label="Швидкі місця">
+            <button type="button" data-place="landmark:victoria-gardens" data-field="from">Вікторія Гарденс</button>
+            <button type="button" data-place="landmark:santa-barbara" data-field="to">Санта Барбара</button>
+            <button type="button" data-place="landmark:railway-station" data-field="to">Вокзал</button>
+            <button type="button" data-place="landmark:university" data-field="to">Університет</button>
+          </div>
+        </section>
+
+        <section id="status-banner" class="status-banner" hidden></section>
+
+        <section id="results-section" class="section-block" hidden>
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Порівняння</div>
+              <h2>Варіанти поїздки</h2>
+            </div>
+            <button id="refresh-plan" class="ghost-button" type="button">Оновити</button>
+          </div>
+          <div id="results" class="results-list"></div>
+          <p class="data-note">Розклад береться з відкритих GTFS-даних Львова. Оцінка в реальному часі з’являється, коли перевізник передає GPS.</p>
+        </section>
+
+        <section class="section-block live-section">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Транспорт онлайн</div>
+              <h2>Де зараз транспорт</h2>
+            </div>
+            <div class="live-indicator"><span class="pulse"></span><span id="live-status">підключення…</span></div>
+          </div>
+          <div class="live-toolbar">
+            <label class="radius-control">
+              <span>Радіус</span>
+              <select id="radius-select">
+                <option value="1500">1,5 км</option>
+                <option value="3500" selected>3,5 км</option>
+                <option value="7000">7 км</option>
+              </select>
+            </label>
+            <button id="locate-button" class="ghost-button" type="button">📍 Моє місце</button>
+            <a class="map-link" href="https://lad.lviv.ua" target="_blank" rel="noreferrer">Відкрити карту Львова ↗</a>
+          </div>
+          <div class="map-picker-bar">
+            <div class="map-picker-copy">
+              <strong>Обери початок і пункт на карті</strong>
+              <span id="map-picker-hint">Клацни точку: Звідки. Потім натисни «Маршрут →» нижче.</span>
+            </div>
+            <div class="map-picker-actions">
+              <button class="map-mode-button is-active" type="button" data-map-mode="from" aria-pressed="true"><span class="mode-dot from"></span>Звідки</button>
+              <button class="map-mode-button" type="button" data-map-mode="to" aria-pressed="false"><span class="mode-dot to"></span>Куди</button>
+              <button id="clear-map-selection" class="map-icon-button" type="button" title="Очистити обрану точку" aria-label="Очистити обрану точку">×</button>
+              <button id="center-map" class="map-icon-button" type="button" title="Показати обрані точки" aria-label="Показати обрані точки">⌖</button>
+              <button id="map-plan-button" class="map-plan-button" type="button">Маршрут →</button>
+            </div>
+          </div>
+          <div class="map-card">
+            <div id="map" aria-label="Карта транспорту"></div>
+            <div id="map-fallback" class="map-fallback" hidden>Карта не завантажилась. Список транспорту нижче працює без неї.</div>
+          </div>
+          <div id="live-list" class="live-list"><div class="empty-state">Завантажую транспорт…</div></div>
+        </section>
+
+        <section class="how-section card">
+          <div class="eyebrow">Як це працює</div>
+          <h2>Невеликий помічник, а не важкий AI</h2>
+          <div class="feature-grid">
+            <article><span>01</span><h3>Розклад</h3><p>Порівнює реальні відправлення, пересадки та піші переходи.</p></article>
+            <article><span>02</span><h3>Живі дані</h3><p>Показує GPS транспорту, який ЛьвівАвтодор передає онлайн.</p></article>
+            <article><span>03</span><h3>Легкий режим</h3><p>Працює як PWA у Safari; можна додати на головний екран iPhone.</p></article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>Зроблено для Львова · транспорт CC BY 4.0 · карта OSM</span>
+        <a href="https://opendata.city-adm.lviv.ua/dataset/lviv-public-transport-gtfs-real-time" target="_blank" rel="noreferrer">Джерело ↗</a>
+      </footer>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="/app.js?v=14" defer></script>
+  </body>
+</html>
