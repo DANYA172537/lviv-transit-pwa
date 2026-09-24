@@ -1,0 +1,18 @@
+{
+  "name": "lviv-transit-pwa",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lightweight PWA route planner for Lviv public transport",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "gtfs-realtime-bindings": "^2.2.0"
+  }
+}

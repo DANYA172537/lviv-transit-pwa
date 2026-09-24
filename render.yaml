@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: lviv-transit-pwa
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
